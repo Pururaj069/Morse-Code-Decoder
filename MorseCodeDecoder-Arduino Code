@@ -1,0 +1,167 @@
+#include <LiquidCrystal.h>
+
+#define BUTTONPIN1 12
+#define BUTTONPIN2 13
+#define BUTTONPIN3 7
+#define BUZZERPIN 8 // Define the pin for the buzzer
+#define DISPLAY_NUMOFCOLUMNS 16
+#define REDLED 11 // Define the pin for the red LED
+
+// Define pins for the LCD display
+#define LCD_RS 10 // Pin for Register Select on LCD
+#define LCD_EN 9  // Pin for Enable on LCD
+#define LCD_D4 5  // Pin for Data 4 on LCD
+#define LCD_D5 4  // Pin for Data 5 on LCD
+#define LCD_D6 3  // Pin for Data 6 on LCD
+#define LCD_D7 2  // Pin for Data 7 on LCD
+
+int Button1State = 0;
+int Button1LastState = 0;
+int Button2State = 0;
+int Button2LastState = 0;
+int Button3State = 0;
+int Button3LastState = 0;
+String tonesBuffer;
+String text;
+String expectedText;
+
+String symbolsAlphabet[][2] = {
+    {".-", "A"},
+    {"-...", "B"},
+    {"-.-.", "C"},
+    {"-..", "D"},
+    {".", "E"},
+    {"..-.", "F"},
+    {"--.", "G"},
+    {"....", "H"},
+    {"..", "I"},
+    {".---", "J"},
+    {"-.-", "K"},
+    {".-..", "L"},
+    {"--", "M"},
+    {"-.", "N"},
+    {"---", "O"},
+    {".--.", "P"},
+    {"--.-", "Q"},
+    {".-.", "R"},
+    {"...", "S"},
+    {"-", "T"},
+    {"..-", "U"},
+    {"...-", "V"},
+    {".--", "W"},
+    {"-..-", "X"},
+    {"-.--", "Y"},
+    {"--..", "Z"},
+    {".----", "1"},
+    {"..---", "2"},
+    {"...--", "3"},
+    {"....-", "4"},
+    {".....", "5"},
+    {"-....", "6"},
+    {"--...", "7"},
+    {"---..", "8"},
+    {"----.", "9"},
+    {"-----", "0"}};
+
+// Initialize the LCD object
+LiquidCrystal lcd(LCD_RS, LCD_EN, LCD_D4, LCD_D5, LCD_D6, LCD_D7);
+
+char getToneFromButtonStates()
+{
+    if (!Button1State && Button1LastState) {
+        tone(BUZZERPIN, 1000, 300); // Beep the buzzer for 300ms
+        digitalWrite(REDLED, HIGH); // Turn on the red LED
+        return '-';
+    }
+    if (!Button2State && Button2LastState) {
+        tone(BUZZERPIN, 1000, 100); // Beep the buzzer for 100ms
+        digitalWrite(REDLED, HIGH); // Turn on the red LED
+        return '.';
+    }
+    if (!Button3State && Button3LastState) {
+        tone(BUZZERPIN, 1000, 100); // Beep the buzzer for 100ms
+        digitalWrite(REDLED, HIGH); // Turn on the red LED
+        return ' ';
+    }
+
+    digitalWrite(REDLED, LOW); // Turn off the red LED if no button is pressed
+    return (char)0;
+}
+
+char getSymbolFromBuffer()
+{
+    if (tonesBuffer == "")
+        return ' ';
+
+    for (int i = 0; i < sizeof(symbolsAlphabet) / sizeof(symbolsAlphabet[0]); i++)
+        if (tonesBuffer == symbolsAlphabet[i][0])
+            return symbolsAlphabet[i][1][0];
+
+    return (char)0;
+}
+
+void extractActionFromTonesBuffer()
+{
+    if (tonesBuffer == "......")
+        text.remove(text.length() - 1, 1);
+    if (tonesBuffer == "------")
+        text = "";
+}
+
+void setup()
+{
+    lcd.begin(16, 2); // Set the LCD dimensions (16 columns x 2 rows)
+    lcd.print("MorseCodeDecoder");
+    lcd.setCursor(0, 1);
+    lcd.print("Final Project");
+
+    pinMode(REDLED, OUTPUT);
+    pinMode(BUTTONPIN1, INPUT);
+    pinMode(BUTTONPIN2, INPUT);
+    pinMode(BUTTONPIN3, INPUT);
+    pinMode(BUZZERPIN, OUTPUT); // Set the buzzer pin as output
+}
+
+void loop()
+{
+    Button1State = digitalRead(BUTTONPIN1);
+    Button2State = digitalRead(BUTTONPIN2);
+    Button3State = digitalRead(BUTTONPIN3);
+
+    char tone = getToneFromButtonStates();
+
+    if (tone != (char)0)
+    {
+        if (tone == ' ')
+        {
+            char symbol = getSymbolFromBuffer();
+
+            if (symbol != (char)0)
+            {
+                text += symbol;
+                if (text.length() > DISPLAY_NUMOFCOLUMNS)
+                    text = (String)symbol;
+            }
+            else
+                extractActionFromTonesBuffer();
+
+            tonesBuffer = "";
+        }
+        else
+        {
+            tonesBuffer += tone;
+            if (tonesBuffer.length() > DISPLAY_NUMOFCOLUMNS)
+                tonesBuffer = (String)tone;
+        }
+
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print(text);
+        lcd.setCursor(0, 1);
+        lcd.print(tonesBuffer);
+    }
+
+    Button1LastState = Button1State;
+    Button2LastState = Button2State;
+    Button3LastState = Button3State;
+}
